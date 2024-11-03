@@ -1,0 +1,119 @@
+# Python
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+*.pyo
+*.pyd
+*.pyd
+
+# Environments
+.env
+*.env
+
+# Django
+*.log
+db.sqlite3
+/db.sqlite3-journal
+media/
+staticfiles/
+
+# Django REST Framework
+*.sqlite3
+
+# Virtual environments
+venv/
+env/
+venv.bak/
+.env.bak/
+
+# VS Code
+.vscode/
+
+# PyCharm
+.idea/
+
+# Byte-compiled / optimized / DLL files
+*.py[cod]
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+*.cover
+.cache
+nosetests.xml
+coverage.xml
+*.coveragerc
+*.spec
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# Translations
+*.mo
+*.pot
+
+# SQL database files
+*.sqlite3
+
+# Django migrations
+*/migrations/*.py
+!*/migrations/__init__.py
+
+# pyenv
+.python-version
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pylint
+.pylint.d/
+
+# Bandit
+.bandit/
+
+# Test results
+junitxml.xml
+test-results/
+
+# VS Code workspace files
+.vscode/
+
+# Mac files
+.DS_Store
+
+# Backup files
+*.bak
+
+# Local IDE settings
+.idea/
