@@ -14,13 +14,12 @@ def get_next_question(session):
 
 def calculate_recommendation(preferences):
     """
-    Calcula la recomendación de bebida basada en las preferencias del usuario y el historial.
-    
-    Se basa en los siguientes criterios:
-    1. Coincidencia exacta en casos exitosos previos.
-    2. Filtrado de bebidas que coincidan con las preferencias y que no estén en la lista de dislikes.
-    3. Ajuste de puntuación basado en el historial de likes y dislikes, con menos peso que las preferencias actuales.
+    Calcula la recomendación de bebida basada en las preferencias del usuario y el historial,
+    incluyendo el cálculo de incertidumbre.
     """
+    # Umbral de incertidumbre máximo permitido (por ejemplo, 30%)
+    MAX_UNCERTAINTY_THRESHOLD = 30
+
     # 1. Buscar coincidencia exacta en casos exitosos
     successful_cases = SuccessfulCase.objects.all()
     for case in successful_cases:
@@ -33,9 +32,10 @@ def calculate_recommendation(preferences):
     disliked_recommendations = set(NegativeRecommendation.objects.values_list('recommendation', flat=True))
     filtered_bebidas = [b for b in bebidas_data if b["name"] not in disliked_recommendations]
 
-    # 3. Calcular la puntuación de cada bebida en base a las preferencias y el historial
+    # 3. Calcular la puntuación y la incertidumbre para cada bebida
     def calculate_score(bebida):
         score = 0
+        max_score = sum(weights.values())  # Puntuación máxima si todas las características coinciden
 
         # Ajuste de historial, con un peso de 0.5 por cada like/dislike histórico
         successful_count = SuccessfulCase.objects.filter(recommendation=bebida["name"]).count()
@@ -47,8 +47,20 @@ def calculate_recommendation(preferences):
             if preferences.get(key) == bebida.get(key):
                 score += weight
 
-        return score
+        # Calcular porcentaje de incertidumbre
+        uncertainty = 100 - ((score / max_score) * 100) if max_score else 100
+        return score, uncertainty
 
-    # Obtener la bebida con la puntuación más alta
-    bebida_recomendada = max(filtered_bebidas, key=calculate_score)
-    return bebida_recomendada["name"]
+    # 4. Seleccionar la bebida con la menor incertidumbre dentro del umbral permitido
+    bebida_recomendada, incertidumbre = None, 100  # Incertidumbre inicial alta
+    for bebida in filtered_bebidas:
+        score, bebida_uncertainty = calculate_score(bebida)
+        if bebida_uncertainty < incertidumbre:  # Seleccionar la bebida con menor incertidumbre
+            bebida_recomendada = bebida
+            incertidumbre = bebida_uncertainty
+
+    # 5. Evaluar el umbral de incertidumbre
+    if incertidumbre > MAX_UNCERTAINTY_THRESHOLD:
+        return "Sera para la proxima"  # Rechazar recomendación si la incertidumbre es demasiado alta
+    else:
+        return bebida_recomendada  # Devolver la bebida completa si está dentro del rango
