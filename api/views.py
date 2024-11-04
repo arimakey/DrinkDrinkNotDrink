@@ -52,19 +52,28 @@ def create_user(request):
 
 @api_view(['GET'])
 def next_question(request, user_id):
-    session = UserSession.objects.get(user_id=user_id)
-    if session.completed:
-        return Response({"message": "El proceso ha finalizado", "recommendation": session.recommendation})
+    try:
+        session = UserSession.objects.get(user_id=user_id)
+        
+        # Obtener la siguiente pregunta
+        question = get_next_question(session)
+        
+        # Verificar si hay una pregunta disponible
+        if question is None:
+            return Response({"message": "No hay más preguntas disponibles."})
+        
+        # Devolver la pregunta si existe
+        return Response({
+            "question": question.get("text", "Pregunta no disponible"),  # Manejo de clave faltante
+            "options": question.get("options", []),
+            "index": question.get("index", -1)
+        })
     
-    question = get_next_question(session)
-    if question:
-        return Response({"question": question["text"], "options": question["options"], "index": question["index"]})
-    else:
-        recommendation = calculate_recommendation(session.preferences)
-        session.recommendation = recommendation
-        session.completed = True
-        session.save()
-        return Response({"message": "Recomendación finalizada", "recommendation": recommendation})
+    except UserSession.DoesNotExist:
+        return Response({"error": "Sesión no encontrada."}, status=404)
+    except Exception as e:
+        print(f"Error: {e}")
+        return Response({"error": "Ocurrió un error al obtener la pregunta."}, status=500)
 
 @api_view(['POST'])
 def answer_question(request, user_id):

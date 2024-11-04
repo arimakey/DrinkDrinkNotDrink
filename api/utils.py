@@ -50,7 +50,7 @@ def get_next_question(session):
 
     # 4. Devolver la pregunta con las opciones válidas
     return {
-        "question": current_question["text"],
+        "text": current_question["text"],
         "options": list(valid_options),
         "index": question_index
     }
