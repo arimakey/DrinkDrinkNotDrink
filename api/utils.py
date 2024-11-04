@@ -11,7 +11,6 @@ from .data import bebidas as bebidas_data  # Renaming the imported bebidas to av
 from .questions import questions, weights
 from .models import SuccessfulCase, NegativeRecommendation
 from .data import bebidas as bebidas_data  # Renaming the imported bebidas to avoid conflict
-from .recommendation import calculate_recommendation
 
 def get_next_question(session):
     """
