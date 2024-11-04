@@ -1,0 +1,1 @@
+web: gunicorn DrinkDrinkNotDrink.wsgi --log-file -
