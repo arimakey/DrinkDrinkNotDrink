@@ -8,52 +8,59 @@ from .questions import questions, weights
 from .models import SuccessfulCase, NegativeRecommendation
 from .data import bebidas as bebidas_data  # Renaming the imported bebidas to avoid conflict
 
+from .questions import questions, weights
+from .models import SuccessfulCase, NegativeRecommendation
+from .data import bebidas as bebidas_data  # Renaming the imported bebidas to avoid conflict
+from .recommendation import calculate_recommendation
+
 def get_next_question(session):
     """
-    Obtiene la siguiente pregunta de la sesión actual, asegurando que las opciones
-    disponibles tengan combinaciones posibles de bebidas basadas en las respuestas previas.
+    Obtiene la siguiente pregunta de la sesión actual.
+    Si no hay opciones válidas para una pregunta, se omite y se pasa a la siguiente.
+    Si no quedan preguntas válidas, devuelve la recomendación final.
     """
     question_index = session.question_index
     preferences = session.preferences  # Preferencias seleccionadas hasta el momento
 
-    if question_index >= len(questions):
-        return None
-
-    # 1. Filtrar las bebidas que coinciden con las preferencias actuales
+    # Filtrar las bebidas que coinciden con las preferencias actuales
     def filter_bebidas(bebidas, preferences):
-        # Filtrar las bebidas que cumplen con todas las preferencias dadas hasta ahora
         filtered_bebidas = bebidas
         for key, value in preferences.items():
             filtered_bebidas = [b for b in filtered_bebidas if b.get(key) == value]
         return filtered_bebidas
 
-    # Bebidas disponibles después de aplicar las preferencias actuales
+    # Filtrar bebidas disponibles según preferencias actuales
     available_bebidas = filter_bebidas(bebidas_data, preferences)
 
-    # Si no hay bebidas que cumplan con las preferencias actuales, regresar None
+    # Si no hay bebidas que cumplan con las preferencias actuales, devolver la recomendación final
     if not available_bebidas:
-        return None
+        return {"recommendation": calculate_recommendation(preferences)}
 
-    # 2. Obtener la siguiente pregunta
-    current_question = questions[question_index]
-    field = current_question["field"]
-    options = current_question["options"]
+    # Buscar la siguiente pregunta con opciones válidas
+    while question_index < len(questions):
+        current_question = questions[question_index]
+        field = current_question["field"]
+        options = current_question["options"]
 
-    # 3. Filtrar opciones de la pregunta actual según las bebidas disponibles
-    valid_options = set(b[field] for b in available_bebidas if b.get(field) in options)
-    
-    # Si no hay opciones válidas, saltar la pregunta
-    if not valid_options:
-        session.question_index += 1  # Saltar a la siguiente pregunta
-        session.save()
-        return get_next_question(session)  # Llamada recursiva para obtener la siguiente pregunta
+        # Filtrar opciones válidas para la pregunta actual basadas en las bebidas disponibles
+        valid_options = set(b[field] for b in available_bebidas if b.get(field) in options)
 
-    # 4. Devolver la pregunta con las opciones válidas
-    return {
-        "text": current_question["text"],
-        "options": list(valid_options),
-        "index": question_index
-    }
+        # Si hay opciones válidas, devuelve esta pregunta
+        if valid_options:
+            session.question_index = question_index  # Actualiza el índice de la pregunta en la sesión
+            session.save()
+            return {
+                "question": current_question["text"],
+                "options": list(valid_options),
+                "index": question_index
+            }
+
+        # Si no hay opciones válidas, incrementa el índice y pasa a la siguiente pregunta
+        question_index += 1
+
+    # Si no quedan preguntas válidas, devuelve la recomendación final
+    return {"recommendation": calculate_recommendation(preferences)}
+
 
 def calculate_recommendation(preferences):
     """
