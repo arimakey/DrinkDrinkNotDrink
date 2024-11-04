@@ -18,7 +18,6 @@ media/
 staticfiles/
 
 # Django REST Framework
-*.sqlite3
 
 # Virtual environments
 venv/
@@ -81,7 +80,6 @@ celerybeat.pid
 *.pot
 
 # SQL database files
-*.sqlite3
 
 # Django migrations
 */migrations/*.py
