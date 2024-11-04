@@ -5,6 +5,43 @@ from .models import UserSession
 from .utils import get_next_question, calculate_recommendation
 from .serializers import UserSerializer, UserSessionSerializer
 from .questions import questions, weights
+from .models import UserSession, SuccessfulCase, NegativeRecommendation
+
+@api_view(['POST'])
+def feedback(request, user_id):
+    try:
+        session = UserSession.objects.get(user_id=user_id)
+        
+        feedback = request.data.get("feedback")
+        if feedback not in ["positive", "negative"]:
+            return Response({"error": "Feedback inválido. Use 'positive' o 'negative'."}, status = 400)
+        
+        if session.recommendation:
+            if feedback == "positive":
+                SuccessfulCase.objects.create(
+                    intensity=session.preferences.get("intensity"),
+                    flavor_profile=session.preferences.get("flavor_profile"),
+                    drink_type=session.preferences.get("drink_type"),
+                    recommendation=session.recommendation
+                )
+            elif feedback == "negative":
+                NegativeRecommendation.objects.create(
+                    intensity=session.preferences.get("intensity"),
+                    flavor_profile=session.preferences.get("flavor_profile"),
+                    drink_type=session.preferences.get("drink_type"),
+                    recommendation=session.recommendation
+                )
+        
+        # Reiniciar la sesión de preguntas
+        session.question_index = 0
+        session.preferences = {}
+        session.completed = False
+        session.recommendation = None
+        session.save()
+        
+        return Response({"message": "Feedback recibido y sesión reiniciada."})
+    except UserSession.DoesNotExist:
+        return Response({"error": "Sesión no encontrada."}, status=404)
 
 @api_view(['POST'])
 def create_user(request):

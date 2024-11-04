@@ -1,7 +1,7 @@
 import random
 from .questions import questions, weights
 from .models import SuccessfulCase, NegativeRecommendation
-
+from .data import bebidas
 def get_next_question(session):
     # Obtener el índice de la pregunta actual
     question_index = session.question_index
@@ -11,41 +11,39 @@ def get_next_question(session):
 
 def calculate_recommendation(preferences):
     """
-    Calcula la recomendación basada en:
-    1. Casos exitosos (SuccessfulCase).
-    2. Sistema de ponderación si no hay coincidencias exactas.
+    Calcula la recomendación teniendo en cuenta:
+    1. Casos exitosos que coincidan exactamente con las preferencias.
+    2. Filtrado de bebidas exactas con dislikes.
+    3. Ajuste de puntuación basado en historial de likes y dislikes, con menos peso que las preferencias actuales.
     """
-    # 1. Buscar coincidencia en los casos exitosos
+    # 1. Buscar coincidencia exacta en casos exitosos
     successful_cases = SuccessfulCase.objects.all()
     for case in successful_cases:
         if (case.intensity == preferences.get("intensity") and
             case.flavor_profile == preferences.get("flavor_profile") and
             case.drink_type == preferences.get("drink_type")):
-            # Si hay coincidencia exacta con un caso exitoso, retornar esa recomendación
             return case.recommendation
 
-    # 2. Si no hay coincidencia exacta, usar la lógica ponderada
 
-    # Ejemplo de bebidas en lugar de una base de datos completa
-    bebidas = [
-        {"name": "Chardonnay", "intensity": "Suave", "flavor_profile": "Frutal", "drink_type": "Vino", "temperature": "Fría", "bubbles": False},
-        {"name": "Cabernet Sauvignon", "intensity": "Fuerte", "flavor_profile": "Seco", "drink_type": "Vino", "temperature": "Temperatura ambiente", "bubbles": False},
-        {"name": "Mojito", "intensity": "Suave", "flavor_profile": "Dulce", "drink_type": "Coctel", "temperature": "Fría", "bubbles": True}
-        # Agrega más bebidas aquí...
-    ]
+    disliked_recommendations = NegativeRecommendation.objects.values_list('recommendation', flat=True)
+    bebidas = [b for b in bebidas if b["name"] not in disliked_recommendations]
 
-    # Filtrar bebidas basándose en recomendaciones negativas
-    for neg in NegativeRecommendation.objects.all():
-        bebidas = [b for b in bebidas if not (b["intensity"] == neg.intensity and b["flavor_profile"] == neg.flavor_profile and b["drink_type"] == neg.drink_type)]
-
-    # Calcular puntuación de coincidencia ponderada
     def calculate_score(bebida):
         score = 0
+
+        # Aumentar o disminuir puntaje basado en historial (con menos peso)
+        successful_count = SuccessfulCase.objects.filter(recommendation=bebida["name"]).count()
+        negative_count = NegativeRecommendation.objects.filter(recommendation=bebida["name"]).count()
+
+        # Ajuste de historial, con un peso de 0.5 por cada like/dislike histórico
+        score += 0.5 * successful_count
+        score -= 0.5 * negative_count
+
         for key, weight in weights.items():
             if preferences.get(key) == bebida.get(key):
                 score += weight
+
         return score
 
-    # Seleccionar la bebida con la puntuación más alta
     bebida_recomendada = max(bebidas, key=calculate_score)
     return bebida_recomendada["name"]
